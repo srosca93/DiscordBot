@@ -1,19 +1,30 @@
 import os
+import json
 import requests
 import discord
-import openai
 from discord.ext import commands
+import openai
+import boto3
+
 
 intents = discord.Intents.default()
 intents.messages = True
 intents.guilds = True
 intents.reactions = True
 intents.message_content = True
-
-DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
-openai.api_key = os.environ.get('OPENAI_API_KEY')
-
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+def get_secret(secret_name, secret_key):
+    region_name = "us-west-1"
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name="secretsmanager",
+        region_name=region_name
+    )
+    
+    response = json.loads(client.get_secret_value(SecretId=secret_name)["SecretString"])
+    return response[secret_key]
 
 
 def download_image(url):
@@ -88,12 +99,13 @@ async def on_message(message):
             prompt += "You have been prompted with: " + message.content.replace(f'<@{bot.user.id}>', '').strip() + "\n"
             prompt += "Generate a reply but omit the prefix containing your username and colon and don't add quotes around your reply"
 
-            print(prompt)
-
             # Generate a response using ChatGPT
             gpt_response = await chatgpt_response(prompt)
 
             # Send the response
             await message.channel.send(gpt_response)
+
+DISCORD_TOKEN = get_secret("discord_token","DISCORD_TOKEN")
+openai.api_key = get_secret("open_ai_key","OPEN_AI_KEY")
 
 bot.run(DISCORD_TOKEN)
