@@ -1,2 +1,3 @@
 downloaded_image.png
 **/*.swp
+__pycache__
